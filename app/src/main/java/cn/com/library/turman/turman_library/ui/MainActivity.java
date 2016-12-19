@@ -21,6 +21,7 @@ import cn.com.library.turman.turman_library.R;
 import cn.com.library.turman.turman_library.httpurlconnection.HttpCallbackListener;
 import cn.com.library.turman.turman_library.httpurlconnection.HttpUtil;
 import cn.com.library.turman.turman_library.httpurlconnection.bean.ActiveEntity;
+import cn.com.library.turman.turman_library.httpurlconnection.bean.HouseBo;
 import cn.com.library.turman.turman_library.httpurlconnection.bean.ResultBean;
 
 public class MainActivity extends AppCompatActivity {
@@ -55,21 +56,55 @@ public class MainActivity extends AppCompatActivity {
         listView.setAdapter(adapter);
 
         /**
-         * 请求数据
+         * Get请求数据
          */
-        HttpUtil.Get("https://apish.centanet.com/v3/zfapi/json/reply/PreferentialRequest",
-                new HashMap(){{
-                    put("pageIndex","1");
-                    put("pageCount","20");
-                }},
-                new HttpCallbackListener() {
+//        HttpUtil.Get("https://apish.centanet.com/v3/zfapi/json/reply/PreferentialRequest",
+//                new HashMap(){{
+//                    put("pageIndex","1");
+//                    put("pageCount","20");
+//                }},
+//                new HttpCallbackListener() {
+//            @Override
+//            public void onFinish(byte[] response) {
+//                String s = new String(response);
+//                Gson gson = new Gson();
+//                ResultBean<ActiveEntity> resultBean = gson.fromJson(s, new TypeToken<ResultBean<ActiveEntity>>(){}.getType());
+//                if (resultBean.getResult() != null && resultBean.getResult().size()> 0) {
+//                    for (ActiveEntity entity : resultBean.getResult()) {
+//                        datas.add(entity.getTitle());
+//                    }
+//                    handler.sendEmptyMessage(0x01);
+//                }
+//            }
+//
+//            @Override
+//            public void onError(Exception e) {
+//                e.printStackTrace();
+//            }
+//        });
+
+//        HttpUtil.addHeader(new HashMap(){{
+//            put("Content-Type","application/json;charset=UTF-8");
+//        }});
+        /**
+         * Post请求
+         */
+        HttpUtil.Post("https://apish.centanet.com/v3/zfapi/json/reply/GetRegionPostsRequest",
+                new HashMap() {{
+                    put("PageIndex","0");
+                    put("PageCount","30");
+                    put("PostType","S");
+                    put("ImageWidth","300");
+                    put("ImageHeight","300");
+
+                }}, new HttpCallbackListener() {
             @Override
             public void onFinish(byte[] response) {
                 String s = new String(response);
                 Gson gson = new Gson();
-                ResultBean<ActiveEntity> resultBean = gson.fromJson(s, new TypeToken<ResultBean<ActiveEntity>>(){}.getType());
+                ResultBean<HouseBo> resultBean = gson.fromJson(s, new TypeToken<ResultBean<HouseBo>>(){}.getType());
                 if (resultBean.getResult() != null && resultBean.getResult().size()> 0) {
-                    for (ActiveEntity entity : resultBean.getResult()) {
+                    for (HouseBo entity : resultBean.getResult()) {
                         datas.add(entity.getTitle());
                     }
                     handler.sendEmptyMessage(0x01);

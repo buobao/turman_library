@@ -13,12 +13,27 @@ import java.net.MalformedURLException;
 import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
+import java.util.Map;
 
 /**
  * Created by diaoqf on 2016/12/15.
  */
 
 public class HttpUtil {
+
+    private static Map<String,String> headers;
+
+    /**
+     * 添加请求头
+     * @param headers
+     */
+    public static void addHeader(Map<String, String> headers) {
+        if (HttpUtil.headers  == null) {
+            HttpUtil.headers = new HashMap<>();
+        }
+        HttpUtil.headers.putAll(headers);
+    }
+
 
     /**
      * Get请求
@@ -52,6 +67,13 @@ public class HttpUtil {
                 httpURLConnection.setReadTimeout(8000);
                 // 如果需要设置apikey，如下设置：
 //                httpURLConnection.setRequestProperty("apikey", "1b18****13f3****729210d6****8e29");
+
+                //添加请求头
+                if (headers != null) {
+                    for (String key:headers.keySet()) {
+                        httpURLConnection.addRequestProperty(key, headers.get(key));
+                    }
+                }
 
                 // 响应码为200表示成功，否则失败。
                 if (httpURLConnection.getResponseCode() != 200) {
@@ -103,29 +125,36 @@ public class HttpUtil {
      * @param urlString
      * @param listener
      */
-    public static void Post(final String urlString, final HttpCallbackListener listener) {
-        new Thread(new Runnable() {
-            @Override
-            public void run() {
-                URL url;
-                HttpURLConnection httpURLConnection = null;
-                try {
-                    url = new URL(urlString);
-                    httpURLConnection = (HttpURLConnection) url.openConnection();
+    public static void Post(final String urlString, Map<String, String> params, final HttpCallbackListener listener) {
+        new Thread(() -> {
+            URL url;
+            HttpURLConnection httpURLConnection = null;
+            try {
+                url = new URL(urlString);
+                httpURLConnection = (HttpURLConnection) url.openConnection();
+                httpURLConnection.setRequestMethod("POST");
+                httpURLConnection.setConnectTimeout(5000);
+                httpURLConnection.setReadTimeout(8000);
 
-                    httpURLConnection.setRequestMethod("POST");
+                // 设置运行输入
+                httpURLConnection.setDoInput(true);
+                // 设置运行输出
+                httpURLConnection.setDoOutput(true);
 
-                    httpURLConnection.setConnectTimeout(5000);
-                    httpURLConnection.setReadTimeout(8000);
+                //添加请求头
+                if (headers != null) {
+                    for (String key:headers.keySet()) {
+                        httpURLConnection.addRequestProperty(key, headers.get(key));
+                    }
+                }
 
-                    // 设置运行输入
-                    httpURLConnection.setDoInput(true);
-                    // 设置运行输出
-                    httpURLConnection.setDoOutput(true);
-
-                    // 请求的数据
-                    String data = "num=" + URLEncoder.encode("10", "UTF-8") +
-                            "&page=" + URLEncoder.encode("1", "UTF-8");
+                // 请求的数据
+                if (params != null && params.size() > 0) {
+                    String data = "";
+                    for (String key : params.keySet()) {
+                        data += key + "=" + URLEncoder.encode(params.get(key), "UTF-8") + "&";
+                    }
+                    data = data.substring(0,data.length() - 1);
 
                     // 将请求的数据写入输出流中
                     OutputStream os = httpURLConnection.getOutputStream();
@@ -134,45 +163,43 @@ public class HttpUtil {
                     bos.flush();
                     bos.close();
                     os.close();
+                }
 
-                    if (httpURLConnection.getResponseCode() == 200) {
-
-                        InputStream is = httpURLConnection.getInputStream();
-                        BufferedInputStream bis = new BufferedInputStream(is);
-
-                        ByteArrayOutputStream baos = new ByteArrayOutputStream();
-                        byte[] bytes = new byte[1024];
-                        int len = -1;
-                        while ((len = bis.read(bytes)) != -1) {
-                            baos.write(bytes, 0, len);
-                        }
-                        is.close();
-                        bis.close();
-                        // 响应的数据
-                        byte[] response = baos.toByteArray();
-
-                        if (listener != null) {
-                            // 回调onFinish()方法
-                            listener.onFinish(response);
-                        }
-                    } else {
-                        Logger.e("请求失败");
+                if (httpURLConnection.getResponseCode() == 200) {
+                    InputStream is = httpURLConnection.getInputStream();
+                    BufferedInputStream bis = new BufferedInputStream(is);
+                    ByteArrayOutputStream baos = new ByteArrayOutputStream();
+                    byte[] bytes = new byte[1024];
+                    int len = -1;
+                    while ((len = bis.read(bytes)) != -1) {
+                        baos.write(bytes, 0, len);
                     }
-                } catch (MalformedURLException e) {
+                    is.close();
+                    bis.close();
+                    // 响应的数据
+                    byte[] response = baos.toByteArray();
+
                     if (listener != null) {
-                        // 回调onError()方法
-                        listener.onError(e);
+                        // 回调onFinish()方法
+                        listener.onFinish(response);
                     }
-                } catch (IOException e) {
-                    if (listener != null) {
-                        // 回调onError()方法
-                        listener.onError(e);
-                    }
-                } finally {
-                    if (httpURLConnection != null) {
-                        // 最后记得关闭连接
-                        httpURLConnection.disconnect();
-                    }
+                } else {
+                    Logger.e("请求失败");
+                }
+            } catch (MalformedURLException e) {
+                if (listener != null) {
+                    // 回调onError()方法
+                    listener.onError(e);
+                }
+            } catch (IOException e) {
+                if (listener != null) {
+                    // 回调onError()方法
+                    listener.onError(e);
+                }
+            } finally {
+                if (httpURLConnection != null) {
+                    // 最后记得关闭连接
+                    httpURLConnection.disconnect();
                 }
             }
         }).start();
